@@ -6,6 +6,47 @@ function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).substring(2)
 }
 
+// Mirrors the calculation logic in the components so AppContext can snapshot
+// current-month totals before any subscription or income mutation.
+function _countOccurrences(dateStr, periodDays, year, month) {
+  const monthStart = new Date(year, month, 1)
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+  const ref = new Date(dateStr + 'T00:00:00')
+  const diffDays = Math.round((ref - monthStart) / 86400000)
+  const offset = ((diffDays % periodDays) + periodDays) % periodDays
+  let count = 0
+  for (let day = offset; day < daysInMonth; day += periodDays) count++
+  return count
+}
+
+function _subCostForMonth(sub, year, month) {
+  if (!sub.active) return 0
+  if (sub.billingCycle === 'daily') return sub.amount * new Date(year, month + 1, 0).getDate()
+  if (sub.billingCycle === 'monthly') return sub.amount
+  if (!sub.nextBillingDate) {
+    if (sub.billingCycle === 'quarterly') return sub.amount / 3
+    if (sub.billingCycle === 'yearly') return sub.amount / 12
+    return sub.amount * 52 / 12
+  }
+  if (sub.billingCycle === 'weekly') return sub.amount * _countOccurrences(sub.nextBillingDate, 7, year, month)
+  const ref = new Date(sub.nextBillingDate + 'T00:00:00')
+  const periodMonths = sub.billingCycle === 'yearly' ? 12 : 3
+  const monthDiff = (year - ref.getFullYear()) * 12 + (month - ref.getMonth())
+  return monthDiff % periodMonths === 0 ? sub.amount : 0
+}
+
+function _incomeForMonth(source, year, month) {
+  if (source.type === 'one-off') {
+    const monthStr = `${year}-${String(month + 1).padStart(2, '0')}`
+    return source.date?.startsWith(monthStr) ? source.amount : 0
+  }
+  if (source.active === false) return 0
+  if (source.frequency === 'monthly') return source.amount
+  const period = source.frequency === 'weekly' ? 7 : 14
+  if (source.nextPaymentDate) return source.amount * _countOccurrences(source.nextPaymentDate, period, year, month)
+  return source.amount * (period === 7 ? 52 : 26) / 12
+}
+
 const initialState = {
   expenses: [],
   savingsGoals: [],
@@ -42,6 +83,21 @@ export function AppProvider({ children }) {
       dispatch({ type: 'LOAD_DATA', expenses: data.expenses, savingsGoals: data.savingsGoals, subscriptions: data.subscriptions, income: data.income, monthlySnapshots: data.monthlySnapshots })
     })
   }, [])
+
+  async function ensureCurrentMonthSnapshot(subs, inc) {
+    const now = new Date()
+    const yr = now.getFullYear()
+    const mo = now.getMonth()
+    const monthStr = `${yr}-${String(mo + 1).padStart(2, '0')}`
+    if ((state.monthlySnapshots || []).some(s => s.month === monthStr)) return
+    const totalSubscriptions = subs.reduce((sum, s) => sum + _subCostForMonth(s, yr, mo), 0)
+    const totalIncome = inc.reduce((sum, i) => sum + _incomeForMonth(i, yr, mo), 0)
+    const snapshots = await window.api.snapshots.save({
+      month: monthStr, totalIncome, totalSubscriptions,
+      snapshotDate: now.toISOString().split('T')[0]
+    })
+    dispatch({ type: 'SET_SNAPSHOTS', monthlySnapshots: snapshots })
+  }
 
   async function addExpense(expenseData) {
     const expense = { id: generateId(), ...expenseData, createdAt: new Date().toISOString() }
@@ -87,33 +143,39 @@ export function AppProvider({ children }) {
   }
 
   async function addIncome(entryData) {
+    await ensureCurrentMonthSnapshot(state.subscriptions, state.income)
     const entry = { id: generateId(), ...entryData, createdAt: new Date().toISOString() }
     const income = await window.api.income.add(entry)
     dispatch({ type: 'SET_INCOME', income })
   }
 
   async function updateIncome(entry) {
+    await ensureCurrentMonthSnapshot(state.subscriptions, state.income)
     const income = await window.api.income.update(entry)
     dispatch({ type: 'SET_INCOME', income })
   }
 
   async function deleteIncome(id) {
+    await ensureCurrentMonthSnapshot(state.subscriptions, state.income)
     const income = await window.api.income.delete(id)
     dispatch({ type: 'SET_INCOME', income })
   }
 
   async function addSubscription(subData) {
+    await ensureCurrentMonthSnapshot(state.subscriptions, state.income)
     const sub = { id: generateId(), ...subData, active: subData.active ?? true, createdAt: new Date().toISOString() }
     const subscriptions = await window.api.subscriptions.add(sub)
     dispatch({ type: 'SET_SUBSCRIPTIONS', subscriptions })
   }
 
   async function updateSubscription(sub) {
+    await ensureCurrentMonthSnapshot(state.subscriptions, state.income)
     const subscriptions = await window.api.subscriptions.update(sub)
     dispatch({ type: 'SET_SUBSCRIPTIONS', subscriptions })
   }
 
   async function deleteSubscription(id) {
+    await ensureCurrentMonthSnapshot(state.subscriptions, state.income)
     const subscriptions = await window.api.subscriptions.delete(id)
     dispatch({ type: 'SET_SUBSCRIPTIONS', subscriptions })
   }
