@@ -35,6 +35,10 @@ function monthlyAmount(sub, year, month) {
 }
 
 function monthlyIncomeAmount(source, year, month) {
+  if (source.type === 'one-off') {
+    const monthStr = `${year}-${String(month + 1).padStart(2, '0')}`
+    return source.date?.startsWith(monthStr) ? source.amount : 0
+  }
   if (source.frequency === 'monthly') return source.amount
   const period = source.frequency === 'weekly' ? 7 : 14
   if (source.nextPaymentDate) {
@@ -73,9 +77,11 @@ export default function Dashboard() {
   const liveSubCost = subscriptions
     .filter(s => s.active)
     .reduce((sum, s) => sum + monthlyAmount(s, yr, mo), 0)
-  const liveIncome = income
-    .filter(i => i.active !== false)
-    .reduce((sum, i) => sum + monthlyIncomeAmount(i, yr, mo), 0)
+  const liveIncome = income.reduce((sum, i) => {
+    if (i.type === 'one-off') return sum + monthlyIncomeAmount(i, yr, mo)
+    if (i.active === false) return sum
+    return sum + monthlyIncomeAmount(i, yr, mo)
+  }, 0)
 
   const snapshot = monthOffset < 0 ? (monthlySnapshots || []).find(s => s.month === selectedMonth) : null
   const totalIncome = snapshot ? snapshot.totalIncome : liveIncome

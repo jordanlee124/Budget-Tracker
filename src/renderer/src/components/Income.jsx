@@ -27,9 +27,11 @@ function countOccurrencesInMonth(dateStr, periodDays, year, month) {
   return count
 }
 
-// Actual income for a specific month — counts real occurrences when a
-// reference date is available; falls back to the statistical average otherwise.
 function incomeForMonth(source, year, month) {
+  if (source.type === 'one-off') {
+    const monthStr = `${year}-${String(month + 1).padStart(2, '0')}`
+    return source.date?.startsWith(monthStr) ? source.amount : 0
+  }
   if (source.frequency === 'monthly') return source.amount
   const period = source.frequency === 'weekly' ? 7 : 14
   if (source.nextPaymentDate) {
@@ -65,12 +67,13 @@ function IncomeForm({ source, onSave, onCancel }) {
   const { t } = useTranslation()
   const [form, setForm] = useState(() => source
     ? { ...source, amount: String(source.amount) }
-    : { name: '', amount: '', frequency: 'monthly', source: 'Salary', nextPaymentDate: '' }
+    : { name: '', amount: '', type: 'recurring', frequency: 'monthly', source: 'Salary', nextPaymentDate: '', date: new Date().toISOString().split('T')[0] }
   )
 
   const set = (key, val) => setForm(f => ({ ...f, [key]: val }))
+  const isOneOff = form.type === 'one-off'
 
-  const monthly = form.amount
+  const approxMonthly = !isOneOff && form.amount
     ? monthlyIncomeAmount(parseFloat(form.amount) || 0, form.frequency)
     : null
 
@@ -94,36 +97,65 @@ function IncomeForm({ source, onSave, onCancel }) {
             onChange={e => set('amount', e.target.value)} required />
         </div>
         <div className="form-group">
-          <label className="form-label">{t('income.frequency')}</label>
-          <select className="form-select" value={form.frequency}
-            onChange={e => set('frequency', e.target.value)}>
-            <option value="weekly">{t('frequencies.weekly')}</option>
-            <option value="fortnightly">{t('frequencies.fortnightly')}</option>
-            <option value="monthly">{t('frequencies.monthly')}</option>
+          <label className="form-label">{t('income.type')}</label>
+          <select className="form-select" value={form.type || 'recurring'}
+            onChange={e => set('type', e.target.value)}>
+            <option value="recurring">{t('income.recurringType')}</option>
+            <option value="one-off">{t('income.oneOff')}</option>
           </select>
         </div>
       </div>
-      {monthly !== null && form.frequency !== 'monthly' && (
-        <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: -8, marginBottom: 16 }}>
-          {t('income.approxPerMonth', { n: monthly.toFixed(2) })}
-        </p>
+
+      {isOneOff ? (
+        <div className="form-row">
+          <div className="form-group">
+            <label className="form-label">{t('income.dateReceived')}</label>
+            <input type="date" className="form-input" value={form.date || ''}
+              onChange={e => set('date', e.target.value)} required />
+          </div>
+          <div className="form-group">
+            <label className="form-label">{t('income.sourceType')}</label>
+            <select className="form-select" value={form.source}
+              onChange={e => set('source', e.target.value)}>
+              {SOURCES.map(s => <option key={s} value={s}>{t(`sources.${s}`)}</option>)}
+            </select>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="form-row">
+            <div className="form-group">
+              <label className="form-label">{t('income.frequency')}</label>
+              <select className="form-select" value={form.frequency}
+                onChange={e => set('frequency', e.target.value)}>
+                <option value="weekly">{t('frequencies.weekly')}</option>
+                <option value="fortnightly">{t('frequencies.fortnightly')}</option>
+                <option value="monthly">{t('frequencies.monthly')}</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">
+                {t('income.nextPaymentDate')} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>({t('common.optional')})</span>
+              </label>
+              <input type="date" className="form-input" value={form.nextPaymentDate || ''}
+                onChange={e => set('nextPaymentDate', e.target.value)} />
+            </div>
+          </div>
+          {approxMonthly !== null && form.frequency !== 'monthly' && (
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: -8, marginBottom: 16 }}>
+              {t('income.approxPerMonth', { n: approxMonthly.toFixed(2) })}
+            </p>
+          )}
+          <div className="form-group">
+            <label className="form-label">{t('income.sourceType')}</label>
+            <select className="form-select" value={form.source}
+              onChange={e => set('source', e.target.value)}>
+              {SOURCES.map(s => <option key={s} value={s}>{t(`sources.${s}`)}</option>)}
+            </select>
+          </div>
+        </>
       )}
-      <div className="form-row">
-        <div className="form-group">
-          <label className="form-label">{t('income.sourceType')}</label>
-          <select className="form-select" value={form.source}
-            onChange={e => set('source', e.target.value)}>
-            {SOURCES.map(s => <option key={s} value={s}>{t(`sources.${s}`)}</option>)}
-          </select>
-        </div>
-        <div className="form-group">
-          <label className="form-label">
-            {t('income.nextPaymentDate')} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>({t('common.optional')})</span>
-          </label>
-          <input type="date" className="form-input" value={form.nextPaymentDate || ''}
-            onChange={e => set('nextPaymentDate', e.target.value)} />
-        </div>
-      </div>
+
       <div className="form-footer">
         <button type="button" className="btn btn-ghost" onClick={onCancel}>{t('common.cancel')}</button>
         <button type="submit" className="btn btn-primary">
@@ -140,9 +172,13 @@ export default function Income() {
   const [showModal, setShowModal] = useState(false)
   const [editingSource, setEditingSource] = useState(null)
 
-  const activeSources = income.filter(i => i.active !== false)
+  const activeSources = income.filter(i => i.type !== 'one-off' && i.active !== false)
   const now = new Date()
-  const totalMonthly = activeSources.reduce((sum, i) => sum + incomeForMonth(i, now.getFullYear(), now.getMonth()), 0)
+  const totalMonthly = income.reduce((sum, i) => {
+    if (i.type === 'one-off') return sum + incomeForMonth(i, now.getFullYear(), now.getMonth())
+    if (i.active === false) return sum
+    return sum + incomeForMonth(i, now.getFullYear(), now.getMonth())
+  }, 0)
 
   const freqLabel = { weekly: t('income.perWeek'), fortnightly: t('income.perFortnight'), monthly: t('income.perMonth') }
 
@@ -209,14 +245,14 @@ export default function Income() {
         <div className="sub-grid">
           {income.map(src => {
             const now = new Date()
-            const monthly = incomeForMonth(src, now.getFullYear(), now.getMonth())
             const color = SOURCE_COLORS[src.source] || '#94a3b8'
+            const isOneOff = src.type === 'one-off'
             const isActive = src.active !== false
 
             return (
               <div
                 key={src.id}
-                className={`sub-card ${!isActive ? 'paused' : ''}`}
+                className={`sub-card ${!isActive && !isOneOff ? 'paused' : ''}`}
                 style={{ '--sub-color': color }}
               >
                 <div className="sub-card-header">
@@ -230,7 +266,7 @@ export default function Income() {
                     </div>
                   </div>
                   <div className="sub-card-actions">
-                    {!isActive && <span className="badge-paused">{t('common.paused')}</span>}
+                    {!isActive && !isOneOff && <span className="badge-paused">{t('common.paused')}</span>}
                     <button className="btn btn-ghost btn-sm"
                       onClick={() => { setEditingSource(src); setShowModal(true) }}>
                       {t('common.edit')}
@@ -245,18 +281,31 @@ export default function Income() {
                 <div>
                   <div className="sub-amount-row">
                     <span className="sub-amount">${src.amount.toFixed(2)}</span>
-                    <span className="sub-cycle">{freqLabel[src.frequency]}</span>
+                    {!isOneOff && <span className="sub-cycle">{freqLabel[src.frequency]}</span>}
                   </div>
-                  {src.frequency !== 'monthly' && (
-                    <div className="sub-monthly-equiv">${monthly.toFixed(2)}/month this month</div>
+                  {!isOneOff && src.frequency !== 'monthly' && (
+                    <div className="sub-monthly-equiv">
+                      ${incomeForMonth(src, now.getFullYear(), now.getMonth()).toFixed(2)}/month this month
+                    </div>
                   )}
                 </div>
 
                 <div className="income-freq-badge">
-                  {t(`frequencies.${src.frequency}`)} · {t('income.recurring')}
+                  {isOneOff
+                    ? t('income.oneTimeBadge')
+                    : `${t(`frequencies.${src.frequency}`)} · ${t('income.recurring')}`}
                 </div>
 
-                {src.nextPaymentDate && (
+                {isOneOff ? (
+                  <div className="sub-billing">
+                    <span className="sub-billing-label">{t('income.dateReceived')}</span>
+                    <span className="sub-billing-date">
+                      {new Date(src.date + 'T12:00:00').toLocaleDateString(locale, {
+                        month: 'short', day: 'numeric', year: 'numeric'
+                      })}
+                    </span>
+                  </div>
+                ) : src.nextPaymentDate ? (
                   <div className="sub-billing">
                     <span className="sub-billing-label">{t('income.nextPayment')}</span>
                     <div className="sub-billing-right">
@@ -268,14 +317,16 @@ export default function Income() {
                       {isActive && <DaysChip days={daysUntil(src.nextPaymentDate)} />}
                     </div>
                   </div>
-                )}
+                ) : null}
 
-                <div className="sub-footer">
-                  <label className="sub-toggle">
-                    <input type="checkbox" checked={isActive} onChange={() => toggleActive(src)} />
-                    {t('common.active')}
-                  </label>
-                </div>
+                {!isOneOff && (
+                  <div className="sub-footer">
+                    <label className="sub-toggle">
+                      <input type="checkbox" checked={isActive} onChange={() => toggleActive(src)} />
+                      {t('common.active')}
+                    </label>
+                  </div>
+                )}
               </div>
             )
           })}
