@@ -4,6 +4,17 @@ A personal budgeting desktop app built with Electron + React. Track your expense
 
 ---
 
+## Download
+
+Grab the latest release from the [Releases page](https://github.com/jordanlee124/Budget-Tracker/releases):
+
+- **Budget Tracker Setup.exe** — standard Windows installer
+- **Budget Tracker Portable.exe** — single file, no installation required, run from anywhere
+
+> First-time run: Windows may show a SmartScreen warning. Click **More info → Run anyway** — this appears because the app is not code-signed.
+
+---
+
 ## Features
 
 ### Dashboard
@@ -50,13 +61,14 @@ A personal budgeting desktop app built with Electron + React. Track your expense
 |---|---|
 | Desktop shell | [Electron](https://www.electronjs.org/) 31 |
 | Frontend | [React](https://react.dev/) 18 + [Vite](https://vitejs.dev/) 5 |
-| Build tooling | [electron-vite](https://electron-vite.org/) 2 |
+| Build tooling | [electron-vite](https://electron-vite.org/) 2 + [electron-builder](https://www.electron.build/) 24 |
 | Persistence | Local JSON file via Node.js `fs` |
 | PDF parsing | [pdf-parse](https://www.npmjs.com/package/pdf-parse) 1.1.1 |
+| Icon generation | [sharp](https://sharp.pixelplumbing.com/) + [png-to-ico](https://www.npmjs.com/package/png-to-ico) |
 
 ---
 
-## Getting Started
+## Getting Started (development)
 
 ### Prerequisites
 - Node.js 18+
@@ -65,18 +77,38 @@ A personal budgeting desktop app built with Electron + React. Track your expense
 ### Install & run
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/budgeting-app.git
-cd budgeting-app
+git clone https://github.com/jordanlee124/Budget-Tracker.git
+cd Budget-Tracker
 npm install
 npm run dev
 ```
 
-### Build
+### Build scripts
 
 ```bash
-# Windows installer
-npm run build:win
+# Development
+npm run dev              # start with hot reload
+
+# Production builds
+npm run build:win        # installer + portable exe
+npm run build:win:portable  # portable exe only
+
+# Icon generation (run once after cloning, CI does this automatically)
+node scripts/generate-icons.mjs
 ```
+
+---
+
+## Releasing a New Version
+
+Releases are published automatically via GitHub Actions when a version tag is pushed:
+
+```bash
+git tag v1.0.1
+git push origin v1.0.1
+```
+
+The workflow builds both the installer and portable exe, then attaches them to a GitHub Release. No manual steps needed.
 
 ---
 
@@ -100,7 +132,7 @@ Supported date formats: `DD/MM/YYYY`, `DD-MM-YYYY`, `YYYY-MM-DD`, `DD MMM YYYY`,
 
 ## Data Storage
 
-All data is saved to:
+All data is saved locally — no accounts, no cloud sync:
 
 ```
 Windows: %APPDATA%\budgeting-app\data.json
