@@ -25,6 +25,7 @@ function countOccurrencesInMonth(dateStr, periodDays, year, month) {
 }
 
 function monthlyAmount(sub, year, month) {
+  if (sub.billingCycle === 'daily') return sub.amount * new Date(year, month + 1, 0).getDate()
   if (sub.billingCycle === 'monthly') return sub.amount
   if (sub.billingCycle === 'quarterly') return sub.amount / 3
   if (sub.billingCycle === 'yearly') return sub.amount / 12

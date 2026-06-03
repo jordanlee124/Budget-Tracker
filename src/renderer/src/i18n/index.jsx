@@ -128,12 +128,14 @@ const translations = {
       nextBilling: 'Next billing',
       markPaid: '✓ Mark Paid',
       noSubscriptions: "No subscriptions yet.\nClick '+ Add Subscription' to track your recurring expenses.",
+      perDay: '/day',
       perWk: '/wk',
       perMo: '/mo',
       perQtr: '/qtr',
       perYr: '/yr'
     },
     cycles: {
+      daily: 'Daily',
       weekly: 'Weekly',
       monthly: 'Monthly',
       quarterly: 'Quarterly',
@@ -335,12 +337,14 @@ const translations = {
       nextBilling: '다음 청구',
       markPaid: '✓ 결제 완료',
       noSubscriptions: "'+ 구독 추가'를 클릭하여\n반복 지출을 추적하세요.",
+      perDay: '/일',
       perWk: '/주',
       perMo: '/월',
       perQtr: '/분기',
       perYr: '/년'
     },
     cycles: {
+      daily: '매일',
       weekly: '주간',
       monthly: '월간',
       quarterly: '분기',

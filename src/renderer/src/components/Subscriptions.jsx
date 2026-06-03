@@ -21,7 +21,7 @@ const CATEGORY_COLORS = {
   'Other': '#94a3b8'
 }
 
-const BILLING_CYCLES = ['weekly', 'monthly', 'quarterly', 'yearly']
+const BILLING_CYCLES = ['daily', 'weekly', 'monthly', 'quarterly', 'yearly']
 
 function countOccurrencesInMonth(dateStr, periodDays, year, month) {
   const monthStart = new Date(year, month, 1)
@@ -35,6 +35,7 @@ function countOccurrencesInMonth(dateStr, periodDays, year, month) {
 }
 
 function subForMonth(sub, year, month) {
+  if (sub.billingCycle === 'daily') return sub.amount * new Date(year, month + 1, 0).getDate()
   if (sub.billingCycle === 'monthly') return sub.amount
   if (sub.billingCycle === 'quarterly') return sub.amount / 3
   if (sub.billingCycle === 'yearly') return sub.amount / 12
@@ -44,8 +45,9 @@ function subForMonth(sub, year, month) {
   return sub.amount * 52 / 12
 }
 
-// Average used only for the individual-card ≈ hint and form preview.
+// Average used only for the individual-card hint and form preview.
 function monthlyAmount(amount, cycle) {
+  if (cycle === 'daily') return amount * 365 / 12
   if (cycle === 'weekly') return amount * 52 / 12
   if (cycle === 'quarterly') return amount / 3
   if (cycle === 'yearly') return amount / 12
@@ -170,6 +172,7 @@ export default function Subscriptions() {
   const [editingSub, setEditingSub] = useState(null)
 
   const cycleLabel = {
+    daily: t('subscriptions.perDay'),
     weekly: t('subscriptions.perWk'),
     monthly: t('subscriptions.perMo'),
     quarterly: t('subscriptions.perQtr'),
