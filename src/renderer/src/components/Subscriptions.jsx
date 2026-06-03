@@ -260,7 +260,8 @@ export default function Subscriptions() {
         <div className="sub-grid">
           {sorted.map(sub => {
             const days = daysUntil(sub.nextBillingDate)
-            const monthly = monthlyAmount(sub.amount, sub.billingCycle)
+            const now = new Date()
+            const monthly = subForMonth(sub, now.getFullYear(), now.getMonth())
             const color = CATEGORY_COLORS[sub.category] || '#94a3b8'
 
             return (
@@ -293,7 +294,7 @@ export default function Subscriptions() {
                     <span className="sub-cycle">{cycleLabel[sub.billingCycle]}</span>
                   </div>
                   {sub.billingCycle !== 'monthly' && (
-                    <div className="sub-monthly-equiv">≈ ${monthly.toFixed(2)}{t('subscriptions.perMo')}</div>
+                    <div className="sub-monthly-equiv">${monthly.toFixed(2)}{t('subscriptions.perMo')} this month</div>
                   )}
                 </div>
 

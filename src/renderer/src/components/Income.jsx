@@ -208,7 +208,8 @@ export default function Income() {
       ) : (
         <div className="sub-grid">
           {income.map(src => {
-            const monthly = monthlyIncomeAmount(src.amount, src.frequency)
+            const now = new Date()
+            const monthly = incomeForMonth(src, now.getFullYear(), now.getMonth())
             const color = SOURCE_COLORS[src.source] || '#94a3b8'
             const isActive = src.active !== false
 
@@ -247,7 +248,7 @@ export default function Income() {
                     <span className="sub-cycle">{freqLabel[src.frequency]}</span>
                   </div>
                   {src.frequency !== 'monthly' && (
-                    <div className="sub-monthly-equiv">{t('income.approxPerMonth', { n: monthly.toFixed(2) })}</div>
+                    <div className="sub-monthly-equiv">${monthly.toFixed(2)}/month this month</div>
                   )}
                 </div>
 
