@@ -163,14 +163,29 @@ export function AppProvider({ children }) {
 
   async function addSubscription(subData) {
     await ensureCurrentMonthSnapshot(state.subscriptions, state.income)
-    const sub = { id: generateId(), ...subData, active: subData.active ?? true, createdAt: new Date().toISOString() }
+    const today = new Date().toISOString().split('T')[0]
+    const sub = {
+      id: generateId(), ...subData, active: subData.active ?? true,
+      createdAt: new Date().toISOString(),
+      history: [{ changedAt: today, amount: subData.amount, billingCycle: subData.billingCycle, active: subData.active ?? true, nextBillingDate: subData.nextBillingDate || null }]
+    }
     const subscriptions = await window.api.subscriptions.add(sub)
     dispatch({ type: 'SET_SUBSCRIPTIONS', subscriptions })
   }
 
   async function updateSubscription(sub) {
     await ensureCurrentMonthSnapshot(state.subscriptions, state.income)
-    const subscriptions = await window.api.subscriptions.update(sub)
+    const today = new Date().toISOString().split('T')[0]
+    const prev = state.subscriptions.find(s => s.id === sub.id)
+    const prevHistory = prev?.history || []
+    const changed = !prev || prev.amount !== sub.amount || prev.billingCycle !== sub.billingCycle || prev.active !== sub.active
+    const updated = {
+      ...sub,
+      history: changed
+        ? [...prevHistory, { changedAt: today, amount: sub.amount, billingCycle: sub.billingCycle, active: sub.active ?? true, nextBillingDate: sub.nextBillingDate || null }]
+        : prevHistory
+    }
+    const subscriptions = await window.api.subscriptions.update(updated)
     dispatch({ type: 'SET_SUBSCRIPTIONS', subscriptions })
   }
 

@@ -13,6 +13,20 @@ const CATEGORY_COLORS = {
   'Other': '#94a3b8'
 }
 
+// Returns the subscription's state (amount, billingCycle, active, nextBillingDate)
+// as it was at the end of the given month, using stored history.
+// Returns null if the subscription didn't exist yet during that month.
+function subStateForMonth(sub, year, month) {
+  const history = sub.history
+  if (!history || history.length === 0) return sub
+  const monthEnd = `${year}-${String(month + 1).padStart(2, '0')}-99`
+  if (history[0].changedAt > monthEnd) return null
+  const entry = [...history]
+    .filter(h => h.changedAt <= monthEnd)
+    .sort((a, b) => b.changedAt.localeCompare(a.changedAt))[0]
+  return entry ? { ...sub, ...entry } : sub
+}
+
 function countOccurrencesInMonth(dateStr, periodDays, year, month) {
   const monthStart = new Date(year, month, 1)
   const daysInMonth = new Date(year, month + 1, 0).getDate()
@@ -90,9 +104,19 @@ export default function Dashboard() {
     return sum + monthlyIncomeAmount(i, yr, mo)
   }, 0)
 
+  // For past months, reconstruct subscription costs from each subscription's
+  // history rather than the snapshot total, so price changes are reflected correctly.
+  const historicalSubCost = monthOffset < 0
+    ? subscriptions.reduce((sum, s) => {
+        const st = subStateForMonth(s, yr, mo)
+        if (!st || !st.active) return sum
+        return sum + monthlyAmount(st, yr, mo)
+      }, 0)
+    : liveSubCost
+
   const snapshot = monthOffset < 0 ? (monthlySnapshots || []).find(s => s.month === selectedMonth) : null
   const totalIncome = snapshot ? snapshot.totalIncome : liveIncome
-  const monthlySubCost = snapshot ? snapshot.totalSubscriptions : liveSubCost
+  const monthlySubCost = monthOffset < 0 ? historicalSubCost : liveSubCost
 
   useEffect(() => {
     if (loading) return

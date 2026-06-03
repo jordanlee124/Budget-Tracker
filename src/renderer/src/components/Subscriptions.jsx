@@ -321,6 +321,15 @@ export default function Subscriptions() {
                   </div>
                 </div>
 
+                {sub.history?.length > 0 && (
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8 }}>
+                    Added {new Date(sub.history[0].changedAt + 'T12:00:00').toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' })}
+                    {sub.history.length > 1 && (
+                      <> · Last changed {new Date(sub.history[sub.history.length - 1].changedAt + 'T12:00:00').toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' })}</>
+                    )}
+                  </div>
+                )}
+
                 <div className="sub-footer">
                   <label className="sub-toggle">
                     <input type="checkbox" checked={sub.active}
