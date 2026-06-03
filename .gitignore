@@ -3,3 +3,8 @@ out/
 dist/
 .DS_Store
 *.log
+
+# generated icon assets (rebuilt from build/icon.svg at release time)
+build/icon.ico
+build/icon.png
+build/icon-*.png

@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#14532d"/>
+      <stop offset="100%" stop-color="#166534"/>
+    </linearGradient>
+    <linearGradient id="bar1" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#4ade80"/>
+      <stop offset="100%" stop-color="#22c55e"/>
+    </linearGradient>
+    <linearGradient id="bar2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#86efac"/>
+      <stop offset="100%" stop-color="#4ade80"/>
+    </linearGradient>
+    <linearGradient id="bar3" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#bbf7d0"/>
+      <stop offset="100%" stop-color="#86efac"/>
+    </linearGradient>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <!-- Rounded background -->
+  <rect width="512" height="512" rx="96" ry="96" fill="url(#bg)"/>
+
+  <!-- Subtle inner glow ring -->
+  <rect width="512" height="512" rx="96" ry="96" fill="none" stroke="#ffffff" stroke-opacity="0.06" stroke-width="2"/>
+
+  <!-- Bar chart: 3 bars growing left to right -->
+  <!-- Bar 1 (short) -->
+  <rect x="82" y="310" width="90" height="148" rx="14" ry="14" fill="url(#bar1)" filter="url(#shadow)"/>
+  <!-- Bar 2 (medium) -->
+  <rect x="210" y="220" width="90" height="238" rx="14" ry="14" fill="url(#bar2)" filter="url(#shadow)"/>
+  <!-- Bar 3 (tall) -->
+  <rect x="338" y="130" width="90" height="328" rx="14" ry="14" fill="url(#bar3)" filter="url(#shadow)"/>
+
+  <!-- Upward trend line -->
+  <polyline
+    points="127,295 255,205 383,115"
+    fill="none"
+    stroke="#ffffff"
+    stroke-width="10"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-opacity="0.85"
+  />
+
+  <!-- Trend line dots -->
+  <circle cx="127" cy="295" r="10" fill="#ffffff" fill-opacity="0.9"/>
+  <circle cx="255" cy="205" r="10" fill="#ffffff" fill-opacity="0.9"/>
+  <circle cx="383" cy="115" r="10" fill="#ffffff" fill-opacity="0.9"/>
+
+  <!-- Bottom baseline -->
+  <rect x="60" y="466" width="390" height="8" rx="4" fill="#ffffff" fill-opacity="0.2"/>
+</svg>
