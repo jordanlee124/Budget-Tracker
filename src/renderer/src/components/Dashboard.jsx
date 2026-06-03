@@ -1,5 +1,6 @@
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { useApp } from '../context/AppContext'
+import { useTranslation } from '../i18n'
 
 const CATEGORY_COLORS = {
   'Food & Dining': '#f59e0b',
@@ -12,24 +13,76 @@ const CATEGORY_COLORS = {
   'Other': '#94a3b8'
 }
 
-export default function Dashboard() {
-  const { expenses, savingsGoals, loading } = useApp()
+function monthlyAmount(amount, cycle) {
+  if (cycle === 'weekly') return amount * 52 / 12
+  if (cycle === 'quarterly') return amount / 3
+  if (cycle === 'yearly') return amount / 12
+  return amount
+}
 
-  const now = new Date()
-  const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-  const monthName = now.toLocaleString('default', { month: 'long', year: 'numeric' })
+function monthlyIncomeAmount(amount, frequency) {
+  if (frequency === 'weekly') return amount * 52 / 12
+  if (frequency === 'fortnightly') return amount * 26 / 12
+  return amount
+}
+
+export default function Dashboard() {
+  const { expenses, savingsGoals, subscriptions, income, monthlySnapshots, saveMonthSnapshot, loading } = useApp()
+  const { t, locale } = useTranslation()
+  const [monthOffset, setMonthOffset] = useState(0)
+
+  const selectedDate = useMemo(() => {
+    const d = new Date()
+    d.setDate(1)
+    d.setMonth(d.getMonth() + monthOffset)
+    return d
+  }, [monthOffset])
+
+  const selectedMonth = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}`
+  const monthName = selectedDate.toLocaleString(locale, { month: 'long', year: 'numeric' })
+  const isFuture = monthOffset > 0
+  const isCurrentMonth = monthOffset === 0
 
   const monthlyExpenses = useMemo(
-    () => expenses.filter(e => e.date.startsWith(thisMonth)),
-    [expenses, thisMonth]
+    () => expenses.filter(e => e.date.startsWith(selectedMonth)),
+    [expenses, selectedMonth]
   )
 
   const totalSpent = monthlyExpenses.reduce((sum, e) => sum + e.amount, 0)
-  const totalSaved = savingsGoals.reduce((sum, g) => sum + g.currentAmount, 0)
 
-  const recentExpenses = useMemo(
-    () => [...expenses].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5),
-    [expenses]
+  const liveSubCost = subscriptions
+    .filter(s => s.active)
+    .reduce((sum, s) => sum + monthlyAmount(s.amount, s.billingCycle), 0)
+  const liveIncome = income
+    .filter(i => i.active !== false)
+    .reduce((sum, i) => sum + monthlyIncomeAmount(i.amount, i.frequency), 0)
+
+  const snapshot = monthOffset < 0 ? (monthlySnapshots || []).find(s => s.month === selectedMonth) : null
+  const totalIncome = snapshot ? snapshot.totalIncome : liveIncome
+  const monthlySubCost = snapshot ? snapshot.totalSubscriptions : liveSubCost
+
+  useEffect(() => {
+    if (loading) return
+    const now = new Date()
+    const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    const prevMonth = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`
+    const exists = (monthlySnapshots || []).some(s => s.month === prevMonth)
+    if (!exists) saveMonthSnapshot(prevMonth, liveIncome, liveSubCost)
+  }, [loading]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (loading || monthOffset >= 0) return
+    const exists = (monthlySnapshots || []).some(s => s.month === selectedMonth)
+    if (!exists) saveMonthSnapshot(selectedMonth, liveIncome, liveSubCost)
+  }, [selectedMonth, loading]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const totalOut = totalSpent + monthlySubCost
+  const remaining = totalIncome - totalOut
+  const hasIncome = totalIncome > 0
+
+  const displayedExpenses = useMemo(
+    () => [...monthlyExpenses].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5),
+    [monthlyExpenses]
   )
 
   const categoryBreakdown = useMemo(() => {
@@ -40,56 +93,102 @@ export default function Dashboard() {
     return Object.entries(breakdown).sort((a, b) => b[1] - a[1]).slice(0, 6)
   }, [monthlyExpenses])
 
-  if (loading) return <div className="loading">Loading…</div>
+  if (loading) return <div className="loading">{t('common.loading')}</div>
+
+  const remainingPct = hasIncome ? Math.max(0, (remaining / totalIncome) * 100) : 0
+  const spentPct = hasIncome ? Math.min((totalSpent / totalIncome) * 100, 100) : 0
+  const subPct = hasIncome ? Math.min((monthlySubCost / totalIncome) * 100, 100 - spentPct) : 0
 
   return (
     <div className="page">
       <div className="page-header">
-        <h1>Dashboard</h1>
-        <span className="date-badge">{monthName}</span>
+        <h1>{t('nav.dashboard')}</h1>
+        <div className="month-nav">
+          <button className="month-nav-btn" onClick={() => setMonthOffset(o => o - 1)} title="Previous month">‹</button>
+          <span className="month-nav-label">{monthName}</span>
+          <button className="month-nav-btn" onClick={() => setMonthOffset(o => o + 1)} title="Next month">›</button>
+          {!isCurrentMonth && (
+            <button className="btn btn-ghost btn-sm" onClick={() => setMonthOffset(0)}>{t('common.today')}</button>
+          )}
+          {isFuture && <span className="projected-badge">{t('dashboard.projected')}</span>}
+        </div>
       </div>
 
       <div className="summary-cards">
         <div className="card summary-card">
+          <div className="card-icon" style={{ background: remaining >= 0 || !hasIncome ? '#dcfce7' : '#fee2e2' }}>
+            {remaining >= 0 || !hasIncome ? '✅' : '⚠️'}
+          </div>
+          <div>
+            <div className="card-label">{t('dashboard.remaining')}</div>
+            <div className="card-value" style={{ color: !hasIncome ? 'var(--text-primary)' : remaining >= 0 ? '#16a34a' : '#dc2626' }}>
+              {hasIncome ? `$${Math.abs(remaining).toFixed(2)}` : '—'}
+            </div>
+          </div>
+        </div>
+        <div className="card summary-card">
+          <div className="card-icon" style={{ background: '#dcfce7' }}>📥</div>
+          <div>
+            <div className="card-label">{t('dashboard.monthlyIncome')}</div>
+            <div className="card-value">${totalIncome.toFixed(2)}</div>
+          </div>
+        </div>
+        <div className="card summary-card">
           <div className="card-icon" style={{ background: '#fef3c7' }}>💸</div>
           <div>
-            <div className="card-label">Spent This Month</div>
+            <div className="card-label">{t('dashboard.expenses')}</div>
             <div className="card-value">${totalSpent.toFixed(2)}</div>
           </div>
         </div>
         <div className="card summary-card">
-          <div className="card-icon" style={{ background: '#dcfce7' }}>💰</div>
+          <div className="card-icon" style={{ background: '#fee2e2' }}>🔄</div>
           <div>
-            <div className="card-label">Total Saved</div>
-            <div className="card-value">${totalSaved.toFixed(2)}</div>
-          </div>
-        </div>
-        <div className="card summary-card">
-          <div className="card-icon" style={{ background: '#ede9fe' }}>🎯</div>
-          <div>
-            <div className="card-label">Active Goals</div>
-            <div className="card-value">{savingsGoals.length}</div>
+            <div className="card-label">{t('dashboard.subscriptionsMo')}</div>
+            <div className="card-value">${monthlySubCost.toFixed(2)}</div>
           </div>
         </div>
       </div>
 
+      {hasIncome && (
+        <div className="card budget-overview" style={{ marginBottom: 20 }}>
+          <div className="budget-overview-header">
+            <h2 className="card-title" style={{ margin: 0 }}>
+              {isFuture ? t('dashboard.projectedBudget') : t('dashboard.monthlyBudget')}
+            </h2>
+            <span className={`budget-status ${remaining < 0 ? 'over' : ''}`}>
+              {remaining >= 0
+                ? t('dashboard.remainingAmt', { amount: remaining.toFixed(2), pct: remainingPct.toFixed(0) })
+                : t('dashboard.overBudget', { amount: Math.abs(remaining).toFixed(2) })}
+            </span>
+          </div>
+          <div className="budget-bar-track">
+            <div className="budget-bar-segment expenses" style={{ width: `${spentPct}%` }} title={`${t('dashboard.expenses')} $${totalSpent.toFixed(2)}`} />
+            <div className="budget-bar-segment subscriptions" style={{ width: `${subPct}%` }} title={`${t('dashboard.subscriptionsMo')} $${monthlySubCost.toFixed(2)}`} />
+          </div>
+          <div className="budget-legend">
+            <span className="legend-item"><span className="legend-dot expenses" />{t('dashboard.expenses')} ${totalSpent.toFixed(2)}</span>
+            <span className="legend-item"><span className="legend-dot subscriptions" />{t('dashboard.subscriptionsMo')} ${monthlySubCost.toFixed(2)}</span>
+            <span className="legend-item"><span className="legend-dot remaining" />{t('dashboard.remaining')} ${Math.max(0, remaining).toFixed(2)}</span>
+          </div>
+        </div>
+      )}
+
       <div className="dashboard-grid">
         <div className="card">
-          <h2 className="card-title">Recent Expenses</h2>
-          {recentExpenses.length === 0 ? (
-            <p className="empty-state">No expenses yet.<br />Head to Expenses to add your first one.</p>
+          <h2 className="card-title">{t('dashboard.recentExpenses', { month: monthName })}</h2>
+          {displayedExpenses.length === 0 ? (
+            <p className="empty-state">
+              {isFuture ? t('dashboard.noExpensesFuture') : t('dashboard.noExpensesMonth')}
+            </p>
           ) : (
             <div className="expense-list">
-              {recentExpenses.map(expense => (
+              {displayedExpenses.map(expense => (
                 <div key={expense.id} className="expense-row">
                   <div className="expense-info">
-                    <div
-                      className="category-dot"
-                      style={{ background: CATEGORY_COLORS[expense.category] || '#94a3b8' }}
-                    />
+                    <div className="category-dot" style={{ background: CATEGORY_COLORS[expense.category] || '#94a3b8' }} />
                     <div>
                       <div className="expense-desc">{expense.description}</div>
-                      <div className="expense-meta">{expense.category} · {expense.date}</div>
+                      <div className="expense-meta">{t(`categories.${expense.category}`)} · {expense.date}</div>
                     </div>
                   </div>
                   <div className="expense-amount">-${expense.amount.toFixed(2)}</div>
@@ -100,23 +199,19 @@ export default function Dashboard() {
         </div>
 
         <div className="card">
-          <h2 className="card-title">This Month by Category</h2>
+          <h2 className="card-title">{t('dashboard.byCategory', { month: monthName })}</h2>
           {categoryBreakdown.length === 0 ? (
-            <p className="empty-state">No spending data for this month yet.</p>
+            <p className="empty-state">{t('dashboard.noSpendingData')}</p>
           ) : (
             <div className="category-breakdown">
               {categoryBreakdown.map(([category, amount]) => (
                 <div key={category} className="category-row">
                   <div className="category-info">
-                    <div
-                      className="category-dot"
-                      style={{ background: CATEGORY_COLORS[category] || '#94a3b8' }}
-                    />
-                    <span className="category-name">{category}</span>
+                    <div className="category-dot" style={{ background: CATEGORY_COLORS[category] || '#94a3b8' }} />
+                    <span className="category-name">{t(`categories.${category}`)}</span>
                   </div>
                   <div className="category-bar-container">
-                    <div
-                      className="category-bar"
+                    <div className="category-bar"
                       style={{
                         width: `${totalSpent > 0 ? ((amount / totalSpent) * 100).toFixed(0) : 0}%`,
                         background: CATEGORY_COLORS[category] || '#94a3b8'
@@ -133,7 +228,7 @@ export default function Dashboard() {
 
       {savingsGoals.length > 0 && (
         <div className="card">
-          <h2 className="card-title">Savings Progress</h2>
+          <h2 className="card-title">{t('dashboard.savingsProgress')}</h2>
           <div className="goals-summary">
             {savingsGoals.map(goal => {
               const pct = Math.min((goal.currentAmount / goal.targetAmount) * 100, 100)
@@ -146,8 +241,7 @@ export default function Dashboard() {
                     </span>
                   </div>
                   <div className="progress-bar-container">
-                    <div
-                      className="progress-bar"
+                    <div className="progress-bar"
                       style={{
                         width: `${pct}%`,
                         background: pct >= 100 ? '#22c55e' : goal.color || '#7c5cbf'

@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { useApp } from '../context/AppContext'
 import Modal from './Modal'
+import { useTranslation } from '../i18n'
 
 const GOAL_COLORS = ['#7c5cbf', '#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#ef4444', '#06b6d4', '#f97316']
 
 function GoalForm({ goal, onSave, onCancel }) {
+  const { t } = useTranslation()
   const [form, setForm] = useState(() => goal
     ? { ...goal, targetAmount: String(goal.targetAmount), currentAmount: String(goal.currentAmount) }
     : { name: '', targetAmount: '', currentAmount: '', deadline: '', color: GOAL_COLORS[0] }
@@ -24,31 +26,31 @@ function GoalForm({ goal, onSave, onCancel }) {
   return (
     <form onSubmit={handleSubmit}>
       <div className="form-group">
-        <label className="form-label">Goal Name</label>
-        <input type="text" className="form-input" placeholder="e.g. Emergency Fund"
+        <label className="form-label">{t('goals.goalNameLabel')}</label>
+        <input type="text" className="form-input" placeholder={t('goals.goalNamePlaceholder')}
           value={form.name} onChange={e => set('name', e.target.value)} required />
       </div>
       <div className="form-row">
         <div className="form-group">
-          <label className="form-label">Target Amount ($)</label>
+          <label className="form-label">{t('goals.targetAmountLabel')}</label>
           <input type="number" className="form-input" placeholder="5000"
             min="1" step="0.01" value={form.targetAmount}
             onChange={e => set('targetAmount', e.target.value)} required />
         </div>
         <div className="form-group">
-          <label className="form-label">Current Savings ($)</label>
+          <label className="form-label">{t('goals.currentSavingsLabel')}</label>
           <input type="number" className="form-input" placeholder="0"
             min="0" step="0.01" value={form.currentAmount}
             onChange={e => set('currentAmount', e.target.value)} />
         </div>
       </div>
       <div className="form-group">
-        <label className="form-label">Target Date (optional)</label>
+        <label className="form-label">{t('goals.targetDateLabel')}</label>
         <input type="date" className="form-input" value={form.deadline}
           onChange={e => set('deadline', e.target.value)} />
       </div>
       <div className="form-group">
-        <label className="form-label">Color</label>
+        <label className="form-label">{t('goals.colorLabel')}</label>
         <div className="color-picker">
           {GOAL_COLORS.map(color => (
             <button key={color} type="button"
@@ -60,9 +62,9 @@ function GoalForm({ goal, onSave, onCancel }) {
         </div>
       </div>
       <div className="form-footer">
-        <button type="button" className="btn btn-ghost" onClick={onCancel}>Cancel</button>
+        <button type="button" className="btn btn-ghost" onClick={onCancel}>{t('common.cancel')}</button>
         <button type="submit" className="btn btn-primary">
-          {goal ? 'Update Goal' : 'Add Goal'}
+          {goal ? t('goals.submitEdit') : t('goals.submitAdd')}
         </button>
       </div>
     </form>
@@ -70,6 +72,7 @@ function GoalForm({ goal, onSave, onCancel }) {
 }
 
 function ContributionForm({ goal, onSave, onCancel }) {
+  const { t } = useTranslation()
   const [amount, setAmount] = useState('')
 
   function handleSubmit(e) {
@@ -86,19 +89,19 @@ function ContributionForm({ goal, onSave, onCancel }) {
         <div className="contribution-goal-name">{goal.name}</div>
         <div className="contribution-amount">${goal.currentAmount.toFixed(2)}</div>
         <div className="contribution-target">
-          of ${goal.targetAmount.toFixed(2)} goal
-          {remaining > 0 && ` · $${remaining.toFixed(2)} remaining`}
+          {t('goals.ofGoal', { n: goal.targetAmount.toFixed(2) })}
+          {remaining > 0 && ` ${t('goals.remaining', { n: remaining.toFixed(2) })}`}
         </div>
       </div>
       <div className="form-group">
-        <label className="form-label">Contribution Amount ($)</label>
+        <label className="form-label">{t('goals.contributionAmountLabel')}</label>
         <input type="number" className="form-input" placeholder="0.00"
           min="0.01" step="0.01" value={amount}
           onChange={e => setAmount(e.target.value)} required autoFocus />
       </div>
       <div className="form-footer">
-        <button type="button" className="btn btn-ghost" onClick={onCancel}>Cancel</button>
-        <button type="submit" className="btn btn-primary">Add Contribution</button>
+        <button type="button" className="btn btn-ghost" onClick={onCancel}>{t('common.cancel')}</button>
+        <button type="submit" className="btn btn-primary">{t('goals.submitContribution')}</button>
       </div>
     </form>
   )
@@ -106,6 +109,7 @@ function ContributionForm({ goal, onSave, onCancel }) {
 
 export default function SavingsGoals() {
   const { savingsGoals, addGoal, updateGoal, deleteGoal, addContribution, loading } = useApp()
+  const { t, locale } = useTranslation()
   const [showGoalModal, setShowGoalModal] = useState(false)
   const [editingGoal, setEditingGoal] = useState(null)
   const [contributingGoal, setContributingGoal] = useState(null)
@@ -129,22 +133,20 @@ export default function SavingsGoals() {
     setEditingGoal(null)
   }
 
-  if (loading) return <div className="loading">Loading…</div>
+  if (loading) return <div className="loading">{t('common.loading')}</div>
 
   return (
     <div className="page">
       <div className="page-header">
-        <h1>Savings Goals</h1>
+        <h1>{t('goals.title')}</h1>
         <button className="btn btn-primary" onClick={() => setShowGoalModal(true)}>
-          + Add Goal
+          {t('goals.addBtn')}
         </button>
       </div>
 
       {savingsGoals.length === 0 ? (
         <div className="card">
-          <p className="empty-state">
-            No savings goals yet.<br />Click '+ Add Goal' to set up your first goal.
-          </p>
+          <p className="empty-state">{t('goals.noGoals')}</p>
         </div>
       ) : (
         <div className="goals-grid">
@@ -159,28 +161,28 @@ export default function SavingsGoals() {
                     <div className="goal-card-title">{goal.name}</div>
                     {goal.deadline && (
                       <div className="goal-card-deadline">
-                        By {new Date(goal.deadline + 'T12:00:00').toLocaleDateString('default', {
+                        {t('goals.byLabel')} {new Date(goal.deadline + 'T12:00:00').toLocaleDateString(locale, {
                           month: 'short', day: 'numeric', year: 'numeric'
                         })}
                       </div>
                     )}
                   </div>
                   <div className="goal-card-actions">
-                    {completed && <span className="badge-completed">✓ Done</span>}
+                    {completed && <span className="badge-completed">{t('goals.done')}</span>}
                     <button className="btn btn-ghost btn-sm"
                       onClick={() => { setEditingGoal(goal); setShowGoalModal(true) }}>
-                      Edit
+                      {t('common.edit')}
                     </button>
                     <button className="btn btn-danger btn-sm"
                       onClick={() => deleteGoal(goal.id)}>
-                      Delete
+                      {t('common.delete')}
                     </button>
                   </div>
                 </div>
 
                 <div>
                   <div className="goal-current">${goal.currentAmount.toFixed(2)}</div>
-                  <div className="goal-target">of ${goal.targetAmount.toFixed(2)} goal</div>
+                  <div className="goal-target">{t('goals.ofGoal', { n: goal.targetAmount.toFixed(2) })}</div>
                 </div>
 
                 <div>
@@ -193,8 +195,8 @@ export default function SavingsGoals() {
                     />
                   </div>
                   <div className="goal-progress-footer">
-                    <span>{pct.toFixed(0)}% complete</span>
-                    {!completed && <span>${(goal.targetAmount - goal.currentAmount).toFixed(2)} left</span>}
+                    <span>{t('goals.pctComplete', { pct: pct.toFixed(0) })}</span>
+                    {!completed && <span>{t('goals.left', { n: (goal.targetAmount - goal.currentAmount).toFixed(2) })}</span>}
                   </div>
                 </div>
 
@@ -202,7 +204,7 @@ export default function SavingsGoals() {
                   <button className="btn btn-primary"
                     style={{ width: '100%', justifyContent: 'center' }}
                     onClick={() => setContributingGoal(goal)}>
-                    + Add Contribution
+                    {t('goals.addContributionBtn')}
                   </button>
                 )}
               </div>
@@ -212,12 +214,12 @@ export default function SavingsGoals() {
       )}
 
       <Modal isOpen={showGoalModal} onClose={closeGoalModal}
-        title={editingGoal ? 'Edit Goal' : 'New Savings Goal'}>
+        title={editingGoal ? t('goals.editModal') : t('goals.addModal')}>
         <GoalForm goal={editingGoal} onSave={handleSaveGoal} onCancel={closeGoalModal} />
       </Modal>
 
       <Modal isOpen={!!contributingGoal} onClose={() => setContributingGoal(null)}
-        title="Add Contribution">
+        title={t('goals.contributionModal')}>
         {contributingGoal && (
           <ContributionForm goal={contributingGoal} onSave={handleContribute}
             onCancel={() => setContributingGoal(null)} />

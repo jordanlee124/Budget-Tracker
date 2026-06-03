@@ -1,6 +1,9 @@
 import { useState, useMemo } from 'react'
 import { useApp } from '../context/AppContext'
 import Modal from './Modal'
+import CsvImport from './CsvImport'
+import PdfImport from './PdfImport'
+import { useTranslation } from '../i18n'
 
 const CATEGORIES = [
   'Food & Dining', 'Transportation', 'Housing', 'Entertainment',
@@ -23,6 +26,7 @@ function getToday() {
 }
 
 function ExpenseForm({ expense, onSave, onCancel }) {
+  const { t } = useTranslation()
   const [form, setForm] = useState(() => expense
     ? { ...expense, amount: String(expense.amount) }
     : { date: getToday(), amount: '', category: 'Food & Dining', description: '', note: '' }
@@ -39,38 +43,38 @@ function ExpenseForm({ expense, onSave, onCancel }) {
     <form onSubmit={handleSubmit}>
       <div className="form-row">
         <div className="form-group">
-          <label className="form-label">Date</label>
+          <label className="form-label">{t('common.date')}</label>
           <input type="date" className="form-input" value={form.date}
             onChange={e => set('date', e.target.value)} required />
         </div>
         <div className="form-group">
-          <label className="form-label">Amount ($)</label>
+          <label className="form-label">{t('common.amount')}</label>
           <input type="number" className="form-input" placeholder="0.00"
             step="0.01" min="0.01" value={form.amount}
             onChange={e => set('amount', e.target.value)} required />
         </div>
       </div>
       <div className="form-group">
-        <label className="form-label">Description</label>
-        <input type="text" className="form-input" placeholder="e.g. Grocery shopping"
+        <label className="form-label">{t('common.description')}</label>
+        <input type="text" className="form-input" placeholder={t('expenses.descriptionPlaceholder')}
           value={form.description} onChange={e => set('description', e.target.value)} required />
       </div>
       <div className="form-group">
-        <label className="form-label">Category</label>
+        <label className="form-label">{t('common.category')}</label>
         <select className="form-select" value={form.category}
           onChange={e => set('category', e.target.value)}>
-          {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+          {CATEGORIES.map(c => <option key={c} value={c}>{t(`categories.${c}`)}</option>)}
         </select>
       </div>
       <div className="form-group">
-        <label className="form-label">Note (optional)</label>
-        <input type="text" className="form-input" placeholder="Any additional notes…"
+        <label className="form-label">{t('expenses.noteLabel')}</label>
+        <input type="text" className="form-input" placeholder={t('expenses.notePlaceholder')}
           value={form.note} onChange={e => set('note', e.target.value)} />
       </div>
       <div className="form-footer">
-        <button type="button" className="btn btn-ghost" onClick={onCancel}>Cancel</button>
+        <button type="button" className="btn btn-ghost" onClick={onCancel}>{t('common.cancel')}</button>
         <button type="submit" className="btn btn-primary">
-          {expense ? 'Update Expense' : 'Add Expense'}
+          {expense ? t('expenses.submitEdit') : t('expenses.submitAdd')}
         </button>
       </div>
     </form>
@@ -79,10 +83,17 @@ function ExpenseForm({ expense, onSave, onCancel }) {
 
 export default function Expenses() {
   const { expenses, addExpense, updateExpense, deleteExpense, loading } = useApp()
+  const { t, lang } = useTranslation()
   const [showModal, setShowModal] = useState(false)
   const [editingExpense, setEditingExpense] = useState(null)
+  const [showCsvImport, setShowCsvImport] = useState(false)
+  const [showPdfImport, setShowPdfImport] = useState(false)
+  const [importedCount, setImportedCount] = useState(null)
   const [categoryFilter, setCategoryFilter] = useState('All')
-  const [monthFilter, setMonthFilter] = useState('All')
+  const [monthFilter, setMonthFilter] = useState(() => {
+    const now = new Date()
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  })
 
   const months = useMemo(() => {
     const set = new Set(expenses.map(e => e.date.substring(0, 7)))
@@ -117,56 +128,73 @@ export default function Expenses() {
     setEditingExpense(null)
   }
 
-  if (loading) return <div className="loading">Loading…</div>
+  if (loading) return <div className="loading">{t('common.loading')}</div>
+
+  const importSuccessMsg = lang === 'ko'
+    ? t('expenses.importSuccess', { n: importedCount })
+    : t('expenses.importSuccess', { n: importedCount, s: importedCount !== 1 ? 's' : '' })
 
   return (
     <div className="page">
       <div className="page-header">
-        <h1>Expenses</h1>
-        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-          + Add Expense
-        </button>
+        <h1>{t('expenses.title')}</h1>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn btn-ghost" onClick={() => { setImportedCount(null); setShowPdfImport(true) }}>
+            Import PDF
+          </button>
+          <button className="btn btn-ghost" onClick={() => { setImportedCount(null); setShowCsvImport(true) }}>
+            {t('expenses.importCsv')}
+          </button>
+          <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+            {t('expenses.addBtn')}
+          </button>
+        </div>
       </div>
+
+      {importedCount !== null && (
+        <div className="import-success-banner">
+          {importSuccessMsg}
+          <button onClick={() => setImportedCount(null)}>×</button>
+        </div>
+      )}
 
       <div className="card">
         <div className="expenses-toolbar">
           <div className="filters">
             <select className="select-filter" value={categoryFilter}
               onChange={e => setCategoryFilter(e.target.value)}>
-              <option value="All">All Categories</option>
-              {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              <option value="All">{t('expenses.allCategories')}</option>
+              {CATEGORIES.map(c => <option key={c} value={c}>{t(`categories.${c}`)}</option>)}
             </select>
             <select className="select-filter" value={monthFilter}
               onChange={e => setMonthFilter(e.target.value)}>
               {months.map(m => (
                 <option key={m} value={m}>
-                  {m === 'All' ? 'All Time' : new Date(m + '-15').toLocaleString('default', { month: 'long', year: 'numeric' })}
+                  {m === 'All' ? t('expenses.allTime') : new Date(m + '-15').toLocaleString('default', { month: 'long', year: 'numeric' })}
                 </option>
               ))}
             </select>
           </div>
           {filtered.length > 0 && (
             <div className="total-label">
-              {filtered.length} expense{filtered.length !== 1 ? 's' : ''} · Total: <strong>${totalFiltered.toFixed(2)}</strong>
+              {filtered.length} · Total: <strong>${totalFiltered.toFixed(2)}</strong>
             </div>
           )}
         </div>
 
         {filtered.length === 0 ? (
           <p className="empty-state">
-            {expenses.length === 0
-              ? "No expenses yet.\nClick '+ Add Expense' to get started."
-              : 'No expenses match your filters.'}
+            {expenses.length === 0 ? t('expenses.noExpenses') : t('expenses.noExpensesFilter')}
           </p>
         ) : (
           <table className="expense-table">
             <thead>
               <tr>
-                <th>Date</th>
-                <th>Description</th>
-                <th>Category</th>
-                <th>Note</th>
-                <th>Amount</th>
+                <th>{t('common.date')}</th>
+                <th>{t('common.description')}</th>
+                <th>{t('common.category')}</th>
+                <th>{t('common.note')}</th>
+                <th>{t('common.amount')}</th>
                 <th></th>
               </tr>
             </thead>
@@ -179,15 +207,15 @@ export default function Expenses() {
                     <span className="category-badge">
                       <span className="category-dot"
                         style={{ background: CATEGORY_COLORS[expense.category] || '#94a3b8' }} />
-                      {expense.category}
+                      {t(`categories.${expense.category}`)}
                     </span>
                   </td>
                   <td style={{ color: 'var(--text-muted)' }}>{expense.note || '—'}</td>
                   <td className="amount-cell">-${expense.amount.toFixed(2)}</td>
                   <td>
                     <div className="actions-cell">
-                      <button className="btn btn-ghost btn-sm" onClick={() => handleEdit(expense)}>Edit</button>
-                      <button className="btn btn-danger btn-sm" onClick={() => deleteExpense(expense.id)}>Delete</button>
+                      <button className="btn btn-ghost btn-sm" onClick={() => handleEdit(expense)}>{t('common.edit')}</button>
+                      <button className="btn btn-danger btn-sm" onClick={() => deleteExpense(expense.id)}>{t('common.delete')}</button>
                     </div>
                   </td>
                 </tr>
@@ -198,8 +226,24 @@ export default function Expenses() {
       </div>
 
       <Modal isOpen={showModal} onClose={closeModal}
-        title={editingExpense ? 'Edit Expense' : 'Add Expense'}>
+        title={editingExpense ? t('expenses.editModal') : t('expenses.addModal')}>
         <ExpenseForm expense={editingExpense} onSave={handleSave} onCancel={closeModal} />
+      </Modal>
+
+      <Modal isOpen={showPdfImport} onClose={() => setShowPdfImport(false)}
+        title="Import from PDF" size="large">
+        <PdfImport onClose={(count) => {
+          setShowPdfImport(false)
+          if (count > 0) setImportedCount(count)
+        }} />
+      </Modal>
+
+      <Modal isOpen={showCsvImport} onClose={() => setShowCsvImport(false)}
+        title={t('csv.title')} size="large">
+        <CsvImport onClose={(count) => {
+          setShowCsvImport(false)
+          if (count > 0) setImportedCount(count)
+        }} />
       </Modal>
     </div>
   )

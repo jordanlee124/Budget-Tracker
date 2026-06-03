@@ -9,17 +9,26 @@ function generateId() {
 const initialState = {
   expenses: [],
   savingsGoals: [],
+  subscriptions: [],
+  income: [],
+  monthlySnapshots: [],
   loading: true
 }
 
 function reducer(state, action) {
   switch (action.type) {
     case 'LOAD_DATA':
-      return { ...state, expenses: action.expenses, savingsGoals: action.savingsGoals, loading: false }
+      return { ...state, expenses: action.expenses, savingsGoals: action.savingsGoals, subscriptions: action.subscriptions, income: action.income, monthlySnapshots: action.monthlySnapshots, loading: false }
     case 'SET_EXPENSES':
       return { ...state, expenses: action.expenses }
     case 'SET_GOALS':
       return { ...state, savingsGoals: action.savingsGoals }
+    case 'SET_SUBSCRIPTIONS':
+      return { ...state, subscriptions: action.subscriptions }
+    case 'SET_INCOME':
+      return { ...state, income: action.income }
+    case 'SET_SNAPSHOTS':
+      return { ...state, monthlySnapshots: action.monthlySnapshots }
     default:
       return state
   }
@@ -30,7 +39,7 @@ export function AppProvider({ children }) {
 
   useEffect(() => {
     window.api.loadData().then(data => {
-      dispatch({ type: 'LOAD_DATA', expenses: data.expenses, savingsGoals: data.savingsGoals })
+      dispatch({ type: 'LOAD_DATA', expenses: data.expenses, savingsGoals: data.savingsGoals, subscriptions: data.subscriptions, income: data.income, monthlySnapshots: data.monthlySnapshots })
     })
   }, [])
 
@@ -77,6 +86,49 @@ export function AppProvider({ children }) {
     await updateGoal({ ...goal, currentAmount: goal.currentAmount + amount })
   }
 
+  async function addIncome(entryData) {
+    const entry = { id: generateId(), ...entryData, createdAt: new Date().toISOString() }
+    const income = await window.api.income.add(entry)
+    dispatch({ type: 'SET_INCOME', income })
+  }
+
+  async function updateIncome(entry) {
+    const income = await window.api.income.update(entry)
+    dispatch({ type: 'SET_INCOME', income })
+  }
+
+  async function deleteIncome(id) {
+    const income = await window.api.income.delete(id)
+    dispatch({ type: 'SET_INCOME', income })
+  }
+
+  async function addSubscription(subData) {
+    const sub = { id: generateId(), ...subData, active: subData.active ?? true, createdAt: new Date().toISOString() }
+    const subscriptions = await window.api.subscriptions.add(sub)
+    dispatch({ type: 'SET_SUBSCRIPTIONS', subscriptions })
+  }
+
+  async function updateSubscription(sub) {
+    const subscriptions = await window.api.subscriptions.update(sub)
+    dispatch({ type: 'SET_SUBSCRIPTIONS', subscriptions })
+  }
+
+  async function deleteSubscription(id) {
+    const subscriptions = await window.api.subscriptions.delete(id)
+    dispatch({ type: 'SET_SUBSCRIPTIONS', subscriptions })
+  }
+
+  async function resetData() {
+    const data = await window.api.resetData()
+    dispatch({ type: 'LOAD_DATA', expenses: data.expenses, savingsGoals: data.savingsGoals, subscriptions: data.subscriptions, income: data.income, monthlySnapshots: data.monthlySnapshots })
+  }
+
+  async function saveMonthSnapshot(month, totalIncome, totalSubscriptions) {
+    const snapshot = { month, totalIncome, totalSubscriptions, snapshotDate: new Date().toISOString().split('T')[0] }
+    const monthlySnapshots = await window.api.snapshots.save(snapshot)
+    dispatch({ type: 'SET_SNAPSHOTS', monthlySnapshots })
+  }
+
   return (
     <AppContext.Provider value={{
       ...state,
@@ -86,7 +138,15 @@ export function AppProvider({ children }) {
       addGoal,
       updateGoal,
       deleteGoal,
-      addContribution
+      addContribution,
+      addSubscription,
+      updateSubscription,
+      deleteSubscription,
+      addIncome,
+      updateIncome,
+      deleteIncome,
+      saveMonthSnapshot,
+      resetData
     }}>
       {children}
     </AppContext.Provider>
