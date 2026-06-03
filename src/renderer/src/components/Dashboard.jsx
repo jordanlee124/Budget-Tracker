@@ -13,17 +13,34 @@ const CATEGORY_COLORS = {
   'Other': '#94a3b8'
 }
 
-function monthlyAmount(amount, cycle) {
-  if (cycle === 'weekly') return amount * 52 / 12
-  if (cycle === 'quarterly') return amount / 3
-  if (cycle === 'yearly') return amount / 12
-  return amount
+function countOccurrencesInMonth(dateStr, periodDays, year, month) {
+  const monthStart = new Date(year, month, 1)
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+  const ref = new Date(dateStr + 'T00:00:00')
+  const diffDays = Math.round((ref - monthStart) / 86400000)
+  const offset = ((diffDays % periodDays) + periodDays) % periodDays
+  let count = 0
+  for (let day = offset; day < daysInMonth; day += periodDays) count++
+  return count
 }
 
-function monthlyIncomeAmount(amount, frequency) {
-  if (frequency === 'weekly') return amount * 52 / 12
-  if (frequency === 'fortnightly') return amount * 26 / 12
-  return amount
+function monthlyAmount(sub, year, month) {
+  if (sub.billingCycle === 'monthly') return sub.amount
+  if (sub.billingCycle === 'quarterly') return sub.amount / 3
+  if (sub.billingCycle === 'yearly') return sub.amount / 12
+  if (sub.nextBillingDate) {
+    return sub.amount * countOccurrencesInMonth(sub.nextBillingDate, 7, year, month)
+  }
+  return sub.amount * 52 / 12
+}
+
+function monthlyIncomeAmount(source, year, month) {
+  if (source.frequency === 'monthly') return source.amount
+  const period = source.frequency === 'weekly' ? 7 : 14
+  if (source.nextPaymentDate) {
+    return source.amount * countOccurrencesInMonth(source.nextPaymentDate, period, year, month)
+  }
+  return source.amount * (period === 7 ? 52 : 26) / 12
 }
 
 export default function Dashboard() {
@@ -50,12 +67,15 @@ export default function Dashboard() {
 
   const totalSpent = monthlyExpenses.reduce((sum, e) => sum + e.amount, 0)
 
+  const yr = selectedDate.getFullYear()
+  const mo = selectedDate.getMonth()
+
   const liveSubCost = subscriptions
     .filter(s => s.active)
-    .reduce((sum, s) => sum + monthlyAmount(s.amount, s.billingCycle), 0)
+    .reduce((sum, s) => sum + monthlyAmount(s, yr, mo), 0)
   const liveIncome = income
     .filter(i => i.active !== false)
-    .reduce((sum, i) => sum + monthlyIncomeAmount(i.amount, i.frequency), 0)
+    .reduce((sum, i) => sum + monthlyIncomeAmount(i, yr, mo), 0)
 
   const snapshot = monthOffset < 0 ? (monthlySnapshots || []).find(s => s.month === selectedMonth) : null
   const totalIncome = snapshot ? snapshot.totalIncome : liveIncome

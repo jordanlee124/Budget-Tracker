@@ -23,6 +23,28 @@ const CATEGORY_COLORS = {
 
 const BILLING_CYCLES = ['weekly', 'monthly', 'quarterly', 'yearly']
 
+function countOccurrencesInMonth(dateStr, periodDays, year, month) {
+  const monthStart = new Date(year, month, 1)
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+  const ref = new Date(dateStr + 'T00:00:00')
+  const diffDays = Math.round((ref - monthStart) / 86400000)
+  const offset = ((diffDays % periodDays) + periodDays) % periodDays
+  let count = 0
+  for (let day = offset; day < daysInMonth; day += periodDays) count++
+  return count
+}
+
+function subForMonth(sub, year, month) {
+  if (sub.billingCycle === 'monthly') return sub.amount
+  if (sub.billingCycle === 'quarterly') return sub.amount / 3
+  if (sub.billingCycle === 'yearly') return sub.amount / 12
+  if (sub.nextBillingDate) {
+    return sub.amount * countOccurrencesInMonth(sub.nextBillingDate, 7, year, month)
+  }
+  return sub.amount * 52 / 12
+}
+
+// Average used only for the individual-card ≈ hint and form preview.
 function monthlyAmount(amount, cycle) {
   if (cycle === 'weekly') return amount * 52 / 12
   if (cycle === 'quarterly') return amount / 3
@@ -154,10 +176,10 @@ export default function Subscriptions() {
     yearly: t('subscriptions.perYr')
   }
 
-  const totalMonthly = useMemo(
-    () => subscriptions.filter(s => s.active).reduce((sum, s) => sum + monthlyAmount(s.amount, s.billingCycle), 0),
-    [subscriptions]
-  )
+  const totalMonthly = useMemo(() => {
+    const now = new Date()
+    return subscriptions.filter(s => s.active).reduce((sum, s) => sum + subForMonth(s, now.getFullYear(), now.getMonth()), 0)
+  }, [subscriptions])
 
   const upcoming = useMemo(
     () => subscriptions.filter(s => s.active && daysUntil(s.nextBillingDate) <= 7),

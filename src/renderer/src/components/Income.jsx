@@ -14,6 +14,31 @@ const SOURCE_COLORS = {
   'Other': '#94a3b8'
 }
 
+// Returns how many times a periodic payment falls in a given calendar month.
+// Uses any known payment date as a phase reference and steps by the period.
+function countOccurrencesInMonth(dateStr, periodDays, year, month) {
+  const monthStart = new Date(year, month, 1)
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+  const ref = new Date(dateStr + 'T00:00:00')
+  const diffDays = Math.round((ref - monthStart) / 86400000)
+  const offset = ((diffDays % periodDays) + periodDays) % periodDays
+  let count = 0
+  for (let day = offset; day < daysInMonth; day += periodDays) count++
+  return count
+}
+
+// Actual income for a specific month — counts real occurrences when a
+// reference date is available; falls back to the statistical average otherwise.
+function incomeForMonth(source, year, month) {
+  if (source.frequency === 'monthly') return source.amount
+  const period = source.frequency === 'weekly' ? 7 : 14
+  if (source.nextPaymentDate) {
+    return source.amount * countOccurrencesInMonth(source.nextPaymentDate, period, year, month)
+  }
+  return source.amount * (period === 7 ? 52 : 26) / 12
+}
+
+// Average used only for the form preview and individual-card hints (shown with ≈).
 export function monthlyIncomeAmount(amount, frequency) {
   if (frequency === 'weekly') return amount * 52 / 12
   if (frequency === 'fortnightly') return amount * 26 / 12
@@ -116,7 +141,8 @@ export default function Income() {
   const [editingSource, setEditingSource] = useState(null)
 
   const activeSources = income.filter(i => i.active !== false)
-  const totalMonthly = activeSources.reduce((sum, i) => sum + monthlyIncomeAmount(i.amount, i.frequency), 0)
+  const now = new Date()
+  const totalMonthly = activeSources.reduce((sum, i) => sum + incomeForMonth(i, now.getFullYear(), now.getMonth()), 0)
 
   const freqLabel = { weekly: t('income.perWeek'), fortnightly: t('income.perFortnight'), monthly: t('income.perMonth') }
 
