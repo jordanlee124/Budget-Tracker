@@ -8,10 +8,16 @@ A personal budgeting desktop app built with Electron + React. Track your expense
 
 Grab the latest release from the [Releases page](https://github.com/jordanlee124/Budget-Tracker/releases):
 
-- **Budget Tracker Setup.exe** — standard Windows installer
-- **Budget Tracker Portable.exe** — single file, no installation required, run from anywhere
+**Windows**
+- **Budget Tracker Setup.exe** — standard installer
+- **Budget Tracker Portable.exe** — single file, no installation required
 
-> First-time run: Windows may show a SmartScreen warning. Click **More info → Run anyway** — this appears because the app is not code-signed.
+**macOS**
+- **Budget Tracker.dmg** — drag-to-Applications installer
+- **Budget Tracker-mac.zip** — zip archive alternative
+
+> **Windows:** SmartScreen may warn on first run — click **More info → Run anyway** (app is unsigned).
+> **macOS:** Gatekeeper may block the app — go to **System Settings → Privacy & Security → Open Anyway** (app is unsigned).
 
 ---
 

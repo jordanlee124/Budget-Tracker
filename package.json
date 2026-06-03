@@ -9,7 +9,8 @@
     "start": "electron-vite preview",
     "build:win": "npm run build && electron-builder --win",
     "build:win:portable": "npm run build && electron-builder --win portable",
-    "release": "npm run build && electron-builder --win --publish always"
+    "release:win": "npm run build && electron-builder --win --publish always",
+    "release:mac": "npm run build && electron-builder --mac --publish always"
   },
   "build": {
     "appId": "com.budgettracker",
@@ -25,6 +26,13 @@
         "nsis",
         "portable"
       ]
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.finance"
     },
     "publish": {
       "provider": "github",
