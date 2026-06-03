@@ -33,6 +33,7 @@ jobs:
 
   build-mac:
     runs-on: macos-latest
+    needs: build-windows
     permissions:
       contents: write
 
