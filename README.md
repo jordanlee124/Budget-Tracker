@@ -13,11 +13,16 @@ Grab the latest release from the [Releases page](https://github.com/jordanlee124
 - **Budget Tracker Portable.exe** — single file, no installation required
 
 **macOS**
-- **Budget Tracker.dmg** — drag-to-Applications installer
-- **Budget Tracker-mac.zip** — zip archive alternative
+- **Budget-Tracker-x.x.x-arm64.dmg** — Apple Silicon (M1/M2/M3)
+- **Budget-Tracker-x.x.x-arm64-mac.zip** — zip alternative
 
 > **Windows:** SmartScreen may warn on first run — click **More info → Run anyway** (app is unsigned).
-> **macOS:** Gatekeeper may block the app — go to **System Settings → Privacy & Security → Open Anyway** (app is unsigned).
+
+> **macOS — "damaged and can't be opened" error:** This is a Gatekeeper restriction on unsigned apps. After dragging the app to Applications, open Terminal and run:
+> ```bash
+> xattr -cr "/Applications/Budget Tracker.app"
+> ```
+> Then open the app normally. This is a one-time step.
 
 ---
 
