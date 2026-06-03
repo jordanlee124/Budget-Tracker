@@ -27,12 +27,18 @@ function countOccurrencesInMonth(dateStr, periodDays, year, month) {
 function monthlyAmount(sub, year, month) {
   if (sub.billingCycle === 'daily') return sub.amount * new Date(year, month + 1, 0).getDate()
   if (sub.billingCycle === 'monthly') return sub.amount
-  if (sub.billingCycle === 'quarterly') return sub.amount / 3
-  if (sub.billingCycle === 'yearly') return sub.amount / 12
-  if (sub.nextBillingDate) {
+  if (!sub.nextBillingDate) {
+    if (sub.billingCycle === 'quarterly') return sub.amount / 3
+    if (sub.billingCycle === 'yearly') return sub.amount / 12
+    return sub.amount * 52 / 12
+  }
+  if (sub.billingCycle === 'weekly') {
     return sub.amount * countOccurrencesInMonth(sub.nextBillingDate, 7, year, month)
   }
-  return sub.amount * 52 / 12
+  const ref = new Date(sub.nextBillingDate + 'T00:00:00')
+  const periodMonths = sub.billingCycle === 'yearly' ? 12 : 3
+  const monthDiff = (year - ref.getFullYear()) * 12 + (month - ref.getMonth())
+  return monthDiff % periodMonths === 0 ? sub.amount : 0
 }
 
 function monthlyIncomeAmount(source, year, month) {
