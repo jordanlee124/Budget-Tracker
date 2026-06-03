@@ -33,7 +33,7 @@ Grab the latest release from the [Releases page](https://github.com/jordanlee124
 - Stacked budget bar showing how much of your income is spent
 - Category breakdown and recent transactions at a glance
 - Navigate forward and backward through months
-- Past months are **frozen as snapshots** so changing your income or subscriptions never retroactively alters history
+- Past months show **historically accurate figures** — subscription price changes and additions are tracked so historical views always reflect what things actually cost at the time
 
 ### Expenses
 - Add, edit, and delete expense entries
@@ -44,13 +44,16 @@ Grab the latest release from the [Releases page](https://github.com/jordanlee124
 - Auto-categorisation based on merchant name keywords
 
 ### Subscriptions
-- Track recurring expenses (weekly / monthly / quarterly / yearly)
+- Track recurring expenses (daily / weekly / monthly / quarterly / yearly)
+- Monthly cost shows the **actual charge for that calendar month** — quarterly and yearly payments appear in full only in the month they fall, not spread as averages
+- Price and status changes are recorded with dates so historical budgets stay accurate
 - Days-until-renewal chip with urgency colour coding
 - Mark as paid to advance to the next billing cycle
 - Monthly and yearly cost summaries
 
 ### Income
-- Recurring income sources (weekly / fortnightly / monthly)
+- **Recurring** income sources (weekly / fortnightly / monthly) — monthly total counts actual paydays in the month, not a statistical average
+- **One-off** income entries for bonuses, freelance payments, or anything non-recurring — counted only in the month received
 - Per-source active/inactive toggle to pause without deleting
 - Optional next payment date with countdown chip
 
@@ -98,11 +101,15 @@ npm run dev
 
 ```bash
 # Development
-npm run dev              # start with hot reload
+npm run dev                  # start with hot reload
 
 # Production builds
-npm run build:win        # installer + portable exe
-npm run build:win:portable  # portable exe only
+npm run build:win            # installer + portable exe
+npm run build:win:portable   # portable exe only
+
+# Publish releases (CI runs these automatically on tag push)
+npm run release:win          # build + publish Windows to GitHub
+npm run release:mac          # build + publish Mac to GitHub (requires macOS)
 
 # Icon generation (run once after cloning, CI does this automatically)
 node scripts/generate-icons.mjs
