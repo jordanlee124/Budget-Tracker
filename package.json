@@ -37,7 +37,8 @@
     "publish": {
       "provider": "github",
       "owner": "jordanlee124",
-      "repo": "Budget-Tracker"
+      "repo": "Budget-Tracker",
+      "releaseType": "release"
     }
   },
   "devDependencies": {
