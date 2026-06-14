@@ -1,6 +1,6 @@
 {
   "name": "budgeting-app",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Personal budgeting and savings tracker",
   "main": "./out/main/index.js",
   "scripts": {
