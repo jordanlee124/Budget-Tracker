@@ -49,6 +49,9 @@ function monthlyAmount(sub, year, month) {
   if (sub.billingCycle === 'weekly') {
     return sub.amount * countOccurrencesInMonth(sub.nextBillingDate, 7, year, month)
   }
+  if (sub.billingCycle === 'fortnightly') {
+    return sub.amount * countOccurrencesInMonth(sub.nextBillingDate, 14, year, month)
+  }
   const ref = new Date(sub.nextBillingDate + 'T00:00:00')
   const periodMonths = sub.billingCycle === 'yearly' ? 12 : 3
   const monthDiff = (year - ref.getFullYear()) * 12 + (month - ref.getMonth())

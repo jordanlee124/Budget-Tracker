@@ -130,6 +130,7 @@ const translations = {
       noSubscriptions: "No subscriptions yet.\nClick '+ Add Subscription' to track your recurring expenses.",
       perDay: '/day',
       perWk: '/wk',
+      perFortnight: '/fortnight',
       perMo: '/mo',
       perQtr: '/qtr',
       perYr: '/yr'
@@ -137,6 +138,7 @@ const translations = {
     cycles: {
       daily: 'Daily',
       weekly: 'Weekly',
+      fortnightly: 'Fortnightly',
       monthly: 'Monthly',
       quarterly: 'Quarterly',
       yearly: 'Yearly'
@@ -339,6 +341,7 @@ const translations = {
       noSubscriptions: "'+ 구독 추가'를 클릭하여\n반복 지출을 추적하세요.",
       perDay: '/일',
       perWk: '/주',
+      perFortnight: '/격주',
       perMo: '/월',
       perQtr: '/분기',
       perYr: '/년'
@@ -346,6 +349,7 @@ const translations = {
     cycles: {
       daily: '매일',
       weekly: '주간',
+      fortnightly: '격주',
       monthly: '월간',
       quarterly: '분기',
       yearly: '연간'

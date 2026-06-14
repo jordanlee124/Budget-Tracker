@@ -21,7 +21,7 @@ const CATEGORY_COLORS = {
   'Other': '#94a3b8'
 }
 
-const BILLING_CYCLES = ['daily', 'weekly', 'monthly', 'quarterly', 'yearly']
+const BILLING_CYCLES = ['daily', 'weekly', 'fortnightly', 'monthly', 'quarterly', 'yearly']
 
 function countOccurrencesInMonth(dateStr, periodDays, year, month) {
   const monthStart = new Date(year, month, 1)
@@ -45,6 +45,9 @@ function subForMonth(sub, year, month) {
   if (sub.billingCycle === 'weekly') {
     return sub.amount * countOccurrencesInMonth(sub.nextBillingDate, 7, year, month)
   }
+  if (sub.billingCycle === 'fortnightly') {
+    return sub.amount * countOccurrencesInMonth(sub.nextBillingDate, 14, year, month)
+  }
   // quarterly / yearly: payment falls in the month only when the month offset
   // from the reference date is a multiple of the billing period in months
   const ref = new Date(sub.nextBillingDate + 'T00:00:00')
@@ -57,6 +60,7 @@ function subForMonth(sub, year, month) {
 function monthlyAmount(amount, cycle) {
   if (cycle === 'daily') return amount * 365 / 12
   if (cycle === 'weekly') return amount * 52 / 12
+  if (cycle === 'fortnightly') return amount * 26 / 12
   if (cycle === 'quarterly') return amount / 3
   if (cycle === 'yearly') return amount / 12
   return amount
@@ -85,6 +89,7 @@ function getToday() {
 function advanceDate(dateStr, cycle) {
   const d = new Date(dateStr + 'T12:00:00')
   if (cycle === 'weekly') d.setDate(d.getDate() + 7)
+  else if (cycle === 'fortnightly') d.setDate(d.getDate() + 14)
   else if (cycle === 'monthly') d.setMonth(d.getMonth() + 1)
   else if (cycle === 'quarterly') d.setMonth(d.getMonth() + 3)
   else if (cycle === 'yearly') d.setFullYear(d.getFullYear() + 1)
@@ -182,6 +187,7 @@ export default function Subscriptions() {
   const cycleLabel = {
     daily: t('subscriptions.perDay'),
     weekly: t('subscriptions.perWk'),
+    fortnightly: t('subscriptions.perFortnight'),
     monthly: t('subscriptions.perMo'),
     quarterly: t('subscriptions.perQtr'),
     yearly: t('subscriptions.perYr')
